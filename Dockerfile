@@ -46,7 +46,8 @@ RUN { \
     echo 'opcache.revalidate_freq=60'; \
 } > /usr/local/etc/php/conf.d/opcache.ini
 
-RUN a2enmod rewrite ssl headers
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
+    && a2enmod mpm_prefork rewrite headers
 
 RUN { \
     echo '<VirtualHost *:80>'; \
