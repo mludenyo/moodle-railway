@@ -1,17 +1,10 @@
-# ─────────────────────────────────────────────
-# Moodle 5.2.1 - Docker Compose
-# Use this for LOCAL testing before deploying to Railway
-# On Railway itself, services are configured via the dashboard
-# ─────────────────────────────────────────────
-version: '3.8'
+﻿services:
 
-services:
-
-  # ── MySQL Database ──────────────────────────
   db:
-    image: mysql:8.0
+    image: mysql:8.4
     container_name: moodle_db
     restart: unless-stopped
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --mysql-native-password=ON
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: moodle
@@ -19,18 +12,11 @@ services:
       MYSQL_PASSWORD: moodlepassword
     volumes:
       - db_data:/var/lib/mysql
-      - ./mysql/conf.d:/etc/mysql/conf.d:ro
     ports:
       - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "moodleuser", "-pmoodlepassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
     networks:
       - moodle_net
 
-  # ── Moodle Application ──────────────────────
   moodle:
     build:
       context: .
@@ -38,35 +24,20 @@ services:
     container_name: moodle_app
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
-      # ── Database ────────────────────────────
       MOODLE_DB_HOST: db
       MOODLE_DB_PORT: 3306
       MOODLE_DB_NAME: moodle
       MOODLE_DB_USER: moodleuser
       MOODLE_DB_PASSWORD: moodlepassword
-
-      # ── Site settings ────────────────────────
       MOODLE_WWWROOT: http://localhost:8080
       MOODLE_SITE_FULLNAME: My Moodle Site
       MOODLE_SITE_SHORTNAME: moodle
       MOODLE_SITE_SUMMARY: Welcome to Moodle
-
-      # ── Admin account ────────────────────────
       MOODLE_ADMIN_USER: admin
       MOODLE_ADMIN_PASSWORD: Admin1234!
       MOODLE_ADMIN_EMAIL: admin@example.com
-
-      # ── SMTP Mail (optional) ─────────────────
-      # MOODLE_SMTP_HOST: sandbox.smtp.mailtrap.io
-      # MOODLE_SMTP_PORT: 587
-      # MOODLE_SMTP_USER: your_mailtrap_user
-      # MOODLE_SMTP_PASSWORD: your_mailtrap_password
-      # MOODLE_SMTP_SECURE: tls
-      # MOODLE_NOREPLY_EMAIL: noreply@yourdomain.com
-
     volumes:
       - moodledata:/var/moodledata
     ports:
@@ -74,14 +45,12 @@ services:
     networks:
       - moodle_net
 
-# ── Named Volumes ───────────────────────────────
 volumes:
   db_data:
     driver: local
   moodledata:
     driver: local
 
-# ── Network ─────────────────────────────────────
 networks:
   moodle_net:
     driver: bridge
