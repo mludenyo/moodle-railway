@@ -1,0 +1,11 @@
+# Force LF line endings for shell scripts and Linux files
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.cnf       text eol=lf
+*.php       text eol=lf
+*.yml       text eol=lf
+*.env*      text eol=lf
+
+# Windows files keep CRLF
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
