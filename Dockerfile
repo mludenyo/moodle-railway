@@ -1,5 +1,8 @@
 ﻿FROM php:8.3-apache
 
+# Cache bust - force rebuild
+ARG CACHEBUST=2
+
 LABEL moodle.version="5.2.1"
 
 # ── System dependencies ───────────────────────
