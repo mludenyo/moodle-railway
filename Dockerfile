@@ -128,6 +128,17 @@ RUN printf '%s\n' \
     '#!/bin/bash' \
     'set -e' \
     'echo "--- Moodle 5.2.1 Starting ---"' \
+    '' \
+    '# ── FIX MPM CONFLICT (Railway environment fix) ──' \
+    'echo "Fixing MPM conflict..."' \
+    '# Forcefully remove ALL MPM module symlinks' \
+    'rm -f /etc/apache2/mods-enabled/mpm_*.load 2>/dev/null || true' \
+    'rm -f /etc/apache2/mods-enabled/mpm_*.conf 2>/dev/null || true' \
+    '# Enable only mpm_prefork' \
+    'a2enmod mpm_prefork' \
+    'echo "MPM fix complete. Enabled modules:"' \
+    'ls -la /etc/apache2/mods-enabled/mpm_*.load 2>/dev/null || echo "ERROR: No MPM enabled"' \
+    '' \
     'echo "Waiting for database at $MOODLE_DB_HOST..."' \
     'until mysql -h "$MOODLE_DB_HOST" -u "$MOODLE_DB_USER" -p"$MOODLE_DB_PASSWORD" --ssl=0 --connect-timeout=5 -e "SELECT 1" > /dev/null 2>&1; do' \
     '    echo "  DB not ready - retrying in 3s..."' \
