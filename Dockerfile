@@ -58,10 +58,12 @@ RUN { \
     echo '        AllowOverride All'; \
     echo '        Require all granted'; \
     echo '    </Directory>'; \
+    echo '    SetEnvIf X-Forwarded-Proto https HTTPS=on'; \
     echo '    ErrorLog ${APACHE_LOG_DIR}/error.log'; \
     echo '    CustomLog ${APACHE_LOG_DIR}/access.log combined'; \
     echo '</VirtualHost>'; \
 } > /etc/apache2/sites-available/000-default.conf
+RUN echo "Listen 80" > /etc/apache2/ports.conf
 
 # Write config.php template with placeholders
 RUN cat > /config-template.php << 'CONFIGEOF'
