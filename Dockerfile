@@ -2,6 +2,7 @@
 
 LABEL moodle.version="5.2.1"
 
+# ── System dependencies ───────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libjpeg-dev \
@@ -24,12 +25,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
+# ── PHP extensions ────────────────────────────
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-configure ldap \
     && docker-php-ext-install -j$(nproc) \
         gd zip xml intl pdo pdo_mysql mysqli \
         opcache soap mbstring curl exif xsl ldap sodium
 
+# ── PHP config ────────────────────────────────
 RUN { \
     echo 'max_input_vars = 5000'; \
     echo 'memory_limit = 256M'; \
@@ -46,11 +49,14 @@ RUN { \
     echo 'opcache.revalidate_freq=60'; \
 } > /usr/local/etc/php/conf.d/opcache.ini
 
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
+# ── Apache config ─────────────────────────────
+# Fix MPM conflict - only do this once
+RUN a2dismod mpm_event mpm_worker mpm_itk 2>/dev/null || true \
     && a2enmod mpm_prefork rewrite headers
 
+# Apache virtual host
 RUN { \
-    echo '<VirtualHost *:80>'; \
+    echo '<VirtualHost *:${PORT:-80}>'; \
     echo '    ServerName localhost'; \
     echo '    DocumentRoot /var/www/html/public'; \
     echo '    <Directory /var/www/html/public>'; \
@@ -63,9 +69,11 @@ RUN { \
     echo '    CustomLog ${APACHE_LOG_DIR}/access.log combined'; \
     echo '</VirtualHost>'; \
 } > /etc/apache2/sites-available/000-default.conf
-RUN echo "Listen 80" > /etc/apache2/ports.conf
 
-# Write config.php template with placeholders
+# Enable Apache env variable expansion
+RUN echo 'ServerName localhost' >> /etc/apache2/apache2.conf
+
+# ── config.php template ───────────────────────
 RUN cat > /config-template.php << 'CONFIGEOF'
 <?php
 unset($CFG);
@@ -85,14 +93,17 @@ $CFG->dboptions = array(
     'dbcollation' => 'utf8mb4_unicode_ci',
     'ssl_verify_server_cert' => false,
 );
-$CFG->wwwroot   = 'DB_WWWROOT';
-$CFG->dataroot  = '/var/moodledata';
-$CFG->admin     = 'admin';
+$CFG->wwwroot      = 'DB_WWWROOT';
+$CFG->dataroot     = '/var/moodledata';
+$CFG->admin        = 'admin';
+$CFG->sslproxy     = true;
+$CFG->reverseproxy = true;
 $CFG->directorypermissions = 02777;
-$CFG->pathtophp = '/usr/local/bin/php';
+$CFG->pathtophp    = '/usr/local/bin/php';
 require_once(__DIR__ . '/lib/setup.php');
 CONFIGEOF
 
+# ── Install Moodle ────────────────────────────
 COPY moodle-5.2.1.tgz /tmp/moodle.tgz
 RUN tar -xzf /tmp/moodle.tgz -C /tmp \
     && cp -r /tmp/moodle/. /var/www/html/ \
@@ -109,7 +120,7 @@ RUN echo "* * * * * www-data php /var/www/html/admin/cron.php >> /var/log/moodle
     > /etc/cron.d/moodle-cron \
     && chmod 0644 /etc/cron.d/moodle-cron
 
-# Write entrypoint directly in Dockerfile to avoid Windows line ending issues
+# ── Entrypoint ────────────────────────────────
 RUN printf '%s\n' \
     '#!/bin/bash' \
     'set -e' \
@@ -145,15 +156,13 @@ RUN printf '%s\n' \
     'chown -R www-data:www-data /var/moodledata' \
     'cron' \
     'echo "Starting Apache..."' \
-    'a2dismod mpm_event mpm_worker mpm_itk 2>/dev/null || true' \
-    'a2enmod mpm_prefork 2>/dev/null || true' \
+    'APACHE_PORT=${PORT:-80}' \
+    'sed -i "s/Listen 80/Listen $APACHE_PORT/" /etc/apache2/ports.conf' \
+    'sed -i "s/<VirtualHost \*:\${PORT:-80}>/<VirtualHost *:$APACHE_PORT>/" /etc/apache2/sites-available/000-default.conf' \
     'exec apache2-foreground' \
     > /entrypoint.sh \
     && chmod +x /entrypoint.sh
 
 EXPOSE 80
-
-RUN a2dismod mpm_event mpm_worker mpm_itk 2>/dev/null || true \
-    && a2enmod mpm_prefork 2>/dev/null || true
 
 ENTRYPOINT ["/entrypoint.sh"]
