@@ -143,10 +143,15 @@ RUN printf '%s\n' \
     'chown -R www-data:www-data /var/moodledata' \
     'cron' \
     'echo "Starting Apache..."' \
+    'a2dismod mpm_event mpm_worker mpm_itk 2>/dev/null || true' \
+    'a2enmod mpm_prefork 2>/dev/null || true' \
     'exec apache2-foreground' \
     > /entrypoint.sh \
     && chmod +x /entrypoint.sh
 
 EXPOSE 80
+
+RUN a2dismod mpm_event mpm_worker mpm_itk 2>/dev/null || true \
+    && a2enmod mpm_prefork 2>/dev/null || true
 
 ENTRYPOINT ["/entrypoint.sh"]
