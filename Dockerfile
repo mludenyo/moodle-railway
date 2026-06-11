@@ -59,7 +59,7 @@ RUN a2dismod mpm_event mpm_worker mpm_itk 2>/dev/null || true \
 
 # Apache virtual host
 RUN { \
-    echo '<VirtualHost *:${PORT:-80}>'; \
+    echo '<VirtualHost *:APACHE_PORT_PLACEHOLDER>'; \
     echo '    ServerName localhost'; \
     echo '    DocumentRoot /var/www/html/public'; \
     echo '    <Directory /var/www/html/public>'; \
@@ -161,7 +161,7 @@ RUN printf '%s\n' \
     'echo "Starting Apache..."' \
     'APACHE_PORT=${PORT:-80}' \
     'sed -i "s/Listen 80/Listen $APACHE_PORT/" /etc/apache2/ports.conf' \
-    'sed -i "s/<VirtualHost \*:\${PORT:-80}>/<VirtualHost *:$APACHE_PORT>/" /etc/apache2/sites-available/000-default.conf' \
+    'sed -i "s/APACHE_PORT_PLACEHOLDER/$APACHE_PORT/" /etc/apache2/sites-available/000-default.conf' \
     'exec apache2-foreground' \
     > /entrypoint.sh \
     && chmod +x /entrypoint.sh
