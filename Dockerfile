@@ -99,8 +99,8 @@ $CFG->dboptions = array(
 $CFG->wwwroot      = 'DB_WWWROOT';
 $CFG->dataroot     = '/var/moodledata';
 $CFG->admin        = 'admin';
-$CFG->sslproxy     = true;
-$CFG->reverseproxy = true;
+// $CFG->sslproxy     = true;   // Disabled for Railway
+// $CFG->reverseproxy = true;   // Disabled for Railway
 $CFG->directorypermissions = 02777;
 $CFG->pathtophp    = '/usr/local/bin/php';
 require_once(__DIR__ . '/lib/setup.php');
